@@ -1,5 +1,8 @@
 module NDViewer
 
-# Write your package code here.
+using Makie
+
+include("widgets.jl")
+include("layers.jl")
 
 end

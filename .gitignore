@@ -1,1 +1,3 @@
 /Manifest.toml
+*.hdf5
+*.nc
