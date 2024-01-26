@@ -1,20 +1,4 @@
 
-function arrows_layer!(ax::Makie.AbstractAxis, positions, directions, colormap)
-
-end
-
-function heatmap_layer!(ax::Makie.AbstractAxis, x, y, image, colormap)
-
-end
-
-function surface_layer!(ax::Makie.AbstractAxis, x, y, image, colormap)
-
-end
-
-function volume_layer!(ax::Makie.AbstractAxis, x, y, z, volume, colormap)
-
-end
-
 function create_plot(tempdata)
     f = Figure()
     fcolor = f[1, 1]
@@ -40,6 +24,41 @@ function create_plot(tempdata)
     f
 end
 
+function plot_data(data, layers)
+    f = Figure()
+    fcolor = f[1, 1]
+    fslider = f[2, 1]
+    fplots = f[3, 1]
+    fcbar = f[4, 1]
+
+    slices = map(layers) do layer
+        layer["data"]
+    end
+    input_data = convert(Observable, data.data)
+    dims = collect(1:ndims(input_data[]))
+
+    result = Dict{Vector{Int},Observable}(
+        dims => input_data
+    )
+    gridpos = 1
+    for slice in slices
+        gridpos = get_dims!(fslider, slice, data.names, gridpos, result)
+    end
+    colormaps = colormap_widget(fcolor, input_data[])
+    for (i, layer) in enumerate(layers)
+        plotfunc = layer["type"]
+        if plotfunc == volume
+            ax = Axis3(fplots[1, i];)
+            volume!(ax, result[layer["data"]]; shading=NoShading, levels=10, algorithm=:absorption, colormaps...)
+        else
+            plotfunc(fplots[1, i], result[layer["data"]]; colormaps...)
+        end
+    end
+    cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
+    Colorbar(fcbar[1, 1]; vertical=false, tellheight=true, tellwidth=true, cmaps...)
+    println("hi!?")
+    f
+end
 
 function match_dims(a, b)
     # same
@@ -67,7 +86,7 @@ end
 function get_dims!(fig, target_dims, names, gridpos, result::Dict)
     available = collect(keys(result))
     if target_dims in available
-        return result[target_dims]
+        return gridpos
     end
     sort!(available, by=x->match_dims(x, target_dims))
     closest = first(available)
@@ -77,16 +96,16 @@ function get_dims!(fig, target_dims, names, gridpos, result::Dict)
     elseif length(closest) == length(target_dims)
         data = map(x -> permutedims(x, (target_dims...,)), input_data)
         result[target_dims] = data
-        return result
+        return gridpos
     elseif length(closest) == length(target_dims) + 1
         dim_to_slice = only(setdiff(closest, target_dims))
         data = slice_dim(fig[gridpos, 1], input_data, dim_to_slice, names[dim_to_slice])
         new_dims = filter(x-> x != dim_to_slice, target_dims)
         result[new_dims] = data
-        return result
+        return gridpos + 1
     else
-        missing_dims = setdiff(closest, target_dims)
-        new_target_dims = filter(x-> x != missing_dims[1], target_dims)
+        missing_dims = sort(setdiff(closest, target_dims))
+        new_target_dims = filter(x -> x != missing_dims[end], closest)
         get_dims!(fig, new_target_dims, names, gridpos, result)
         return get_dims!(fig, target_dims, names, gridpos + 1, result)
     end
