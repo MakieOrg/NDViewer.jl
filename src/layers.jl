@@ -56,7 +56,6 @@ function plot_data(data, layers)
     end
     cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
     Colorbar(fcbar[1, 1]; vertical=false, tellheight=true, tellwidth=true, cmaps...)
-    println("hi!?")
     f
 end
 
