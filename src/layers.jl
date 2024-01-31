@@ -1,64 +1,4 @@
 
-function create_plot(tempdata)
-    f = Figure()
-    fcolor = f[1, 1]
-    fslider = f[2, 1]
-    fplots = f[3, 1]
-    fcbar = f[4, 1]
-    time_slice = slice_dim(fslider[1, 1], tempdata, 4, "time")
-    slice_2d = slice_dim(fslider[2, 1], time_slice, 3, "height")
-    colormaps = colormap_widget(fcolor, tempdata)
-    grid = SliderGrid(fslider[3, 1],
-        (label="absorption", range=LinRange(0, 100, 100), startvalue=50),
-    )
-    absorption = grid.sliders[1]
-
-    ax, hp = heatmap(fplots[1, 1], slice_2d; axis=(; aspect=DataAspect()), colormaps...)
-    ax, cp = volume(fplots[1, 2], time_slice; axis=(; type=Axis3),
-        shading=NoShading, levels=10, algorithm=:absorption, absorption=map(Float32, absorption.value),
-        colormaps...
-    )
-    cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
-    Colorbar(fcbar[1, 1]; vertical=false, tellheight=true, tellwidth=true, cmaps...)
-
-    f
-end
-
-function plot_data(data, layers)
-    f = Figure()
-    fcolor = f[1, 1]
-    fslider = f[2, 1]
-    fplots = f[3, 1]
-    fcbar = f[4, 1]
-
-    slices = map(layers) do layer
-        layer["data"]
-    end
-    input_data = convert(Observable, data.data)
-    dims = collect(1:ndims(input_data[]))
-
-    result = Dict{Vector{Int},Observable}(
-        dims => input_data
-    )
-    gridpos = 1
-    for slice in slices
-        gridpos = get_dims!(fslider, slice, data.names, gridpos, result)
-    end
-    colormaps = colormap_widget(fcolor, input_data[])
-    for (i, layer) in enumerate(layers)
-        plotfunc = layer["type"]
-        if plotfunc == volume
-            ax = Axis3(fplots[1, i];)
-            volume!(ax, result[layer["data"]]; shading=NoShading, levels=10, algorithm=:absorption, colormaps...)
-        else
-            plotfunc(fplots[1, i], result[layer["data"]]; colormaps...)
-        end
-    end
-    cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
-    Colorbar(fcbar[1, 1]; vertical=false, tellheight=true, tellwidth=true, cmaps...)
-    f
-end
-
 function match_dims(a, b)
     # same
     a == b && return -1000
@@ -108,4 +48,43 @@ function get_dims!(fig, target_dims, names, gridpos, result::Dict)
         get_dims!(fig, new_target_dims, names, gridpos, result)
         return get_dims!(fig, target_dims, names, gridpos + 1, result)
     end
+end
+
+
+
+function plot_data(data, layers; figure=(;))
+    size = get(figure, :size, (1200, 800))
+    f = Figure(; figure..., size=size)
+    fcolor = f[1, 1]
+    fslider = f[2, 1]
+    fplots = f[3, 1]
+    fcbar = f[4, 1]
+
+    slices = sort!(map(layers) do layer
+            layer["data"]
+        end; by=length, rev=true)
+
+    input_data = convert(Observable, data.data)
+    dims = collect(1:ndims(input_data[]))
+
+    result = Dict{Vector{Int},Observable}(
+        dims => input_data
+    )
+    gridpos = 1
+    for slice in slices
+        gridpos = get_dims!(fslider, slice, data.names, gridpos, result)
+    end
+    colormaps = colormap_widget(fcolor, input_data[])
+    for (i, layer) in enumerate(layers)
+        plotfunc = layer["type"]
+        if plotfunc == volume
+            ax = Axis3(fplots[1, i];)
+            volume!(ax, result[layer["data"]]; shading=NoShading, levels=10, algorithm=:absorption, colormaps...)
+        else
+            plotfunc(fplots[1, i], result[layer["data"]]; colormaps...)
+        end
+    end
+    cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
+    Colorbar(fcbar[1, 1]; vertical=false, tellheight=true, tellwidth=true, cmaps...)
+    f
 end

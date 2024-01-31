@@ -1,6 +1,6 @@
 
 function play_slider(figure, label, range)
-    l = Label(figure[1, 1], label, halign=:left)
+    l = Label(figure[1, 1], string(label), halign=:left)
     button = Button(figure[1, 2]; label=">")
     slider = Slider(figure[1, 3]; range=range)
     vl = Label(figure[1, 4], map(string, slider.value), halign=:right)
