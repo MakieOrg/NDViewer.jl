@@ -1,5 +1,17 @@
 
-function play_slider(figure, label, range)
+function selection_widget(figure, label, options::AbstractVector{<: String})
+    l = Label(figure[1, 1], string(label), halign=:left)
+    menu = Menu(figure[1, 2]; options=options)
+    return menu.selection
+end
+
+using Dates
+
+function selection_widget(figure, label, range::AbstractVector{<: DateTime})
+    selection_widget(figure, label, 1:length(range))
+end
+
+function selection_widget(figure, label, range::AbstractVector{<:Number})
     l = Label(figure[1, 1], string(label), halign=:left)
     button = Button(figure[1, 2]; label=">")
     slider = Slider(figure[1, 3]; range=range)
@@ -47,10 +59,19 @@ function play_slider(figure, label, range)
     return slider.value
 end
 
+using DimensionalData
+
+get_axis_values(array, dim) = collect(axes(array, dim))
+get_axis_values(array::AbstractDimArray, dim) = collect(dims(array, dim))
+
 function slice_dim(figure, arr, dim, dim_name)
     arr_obs = convert(Observable, arr)
-    idx_obs = play_slider(figure, dim_name, collect(axes(arr_obs[], dim)))
-    return map(arr_obs, idx_obs) do arr, idx
+    values = get_axis_values(arr_obs[], dim)
+    indices = axes(arr_obs[], dim)
+    lookup = Dict(zip(values, indices))
+    value_obs = selection_widget(figure, dim_name, values)
+    return map(arr_obs, value_obs) do arr, value
+        idx = get(lookup, value, value)
         return view(arr, ntuple(i -> i == dim ? idx : (:), ndims(arr))...)
     end
 end
@@ -86,7 +107,8 @@ const COLORMAPS = [
 ]
 
 function colormap_widget(f, data, colormaps=COLORMAPS)
-    limits = Makie.extrema_nan(data)
+    # decent limits
+    limits = (-100, 100)
     kw = (
         colorrange=Observable(Vec2f(limits)),
         lowclip=Observable(:black),
