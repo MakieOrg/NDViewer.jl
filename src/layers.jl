@@ -2,12 +2,13 @@
 function match_dims(a, b)
     # same
     a == b && return -1000
-    na = length(a); nb = length(b)
+    na = length(a)
+    nb = length(b)
     # permutation
-    na == nb && all(x-> x in a, b) && return -900
+    na == nb && all(x -> x in a, b) && return -900
     # ready to slice
-    nb == na-1 && a[1:nb] == b && return -800
-    if all(x-> (x in a), b)
+    nb == na - 1 && a[1:nb] == b && return -800
+    if all(x -> (x in a), b)
         i = 0
         for (x, y) in zip(a, b)
             if x == y
@@ -28,7 +29,7 @@ function get_dims!(fig, target_dims, names, gridpos, result::Dict)
     if target_dims in available
         return gridpos
     end
-    sort!(available, by=x->match_dims(x, target_dims))
+    sort!(available, by=x -> match_dims(x, target_dims))
     closest = first(available)
     input_data = result[closest]
     if any(x -> x > ndims(input_data[]), target_dims)
@@ -40,7 +41,7 @@ function get_dims!(fig, target_dims, names, gridpos, result::Dict)
     elseif length(closest) == length(target_dims) + 1
         dim_to_slice = only(setdiff(closest, target_dims))
         data = slice_dim(fig[gridpos, 1], input_data, dim_to_slice, names[dim_to_slice])
-        new_dims = filter(x-> x != dim_to_slice, target_dims)
+        new_dims = filter(x -> x != dim_to_slice, target_dims)
         result[new_dims] = data
         return gridpos + 1
     else
@@ -50,7 +51,6 @@ function get_dims!(fig, target_dims, names, gridpos, result::Dict)
         return get_dims!(fig, target_dims, names, gridpos + 1, result)
     end
 end
-
 
 
 function plot_data(data, layers; figure=(;))
@@ -75,7 +75,19 @@ function plot_data(data, layers; figure=(;))
     for slice in slices
         gridpos = get_dims!(fslider, slice, data.names, gridpos, result)
     end
-    colormaps = colormap_widget(fcolor, input_data[])
+    used_data = map(slice -> result[slice], slices)
+
+    colorrange = lift(used_data...) do args...
+        extremata = map(Makie.extrema_nan, [args...])
+        mini = reduce((a, x) -> Base.min(a, x[1]), extremata; init=Inf)
+        maxi = reduce((a, x) -> Base.max(a, x[2]), extremata; init=-Inf)
+        if mini .- maxi ≈ 0
+            mini = mini .- 0.5
+            maxi = maxi .+ 0.5
+        end
+        return Vec2f(mini, maxi)
+    end
+    colormaps = colormap_widget(fcolor, colorrange)
     for (i, layer) in enumerate(layers)
         plotfunc = layer["type"]
         if plotfunc == volume

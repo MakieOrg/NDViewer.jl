@@ -1,10 +1,41 @@
 using YAXArrays, GLMakie, NDViewer, LinearAlgebra
 using YAXArrays, NetCDF
-using DimensionalData
-data_cube = Cube(joinpath(@__DIR__, "speedyweather.nc"))
-vars = collect(data_cube.Variable)
-x = convert(Array{Float32}, data_cube.data)
-data_cube
+using DimensionalData, Zarr
+using DiskArrays
+data_cube = Cube("speedyweather.nc")
+path = ("gs://cmip6/CMIP6/ScenarioMIP/DKRZ/MPI-ESM1-2-HR/ssp585/r1i1p1f1/3hr/tas/gn/v20190710")
+g = open_dataset(zopen(path, consolidated=true))
+
+data_cube = DimensionalData.modify(g.tas) do arr
+    DiskArrays.CachedDiskArray(arr)
+end
+data = (
+    data=data_cube,
+    names=map(x -> name(x.dim), collect(axes(data_cube))),
+);
+
+layers = [
+    Dict(
+        "type" => heatmap,
+        "data" => [1, 2],
+    )
+]
+
+NDViewer.plot_data(data, layers)
+
+
+args = (data_cube[:, :, 1],)
+extremata = map(Makie.extrema_nan, [args...])
+mini = reduce((a, x) -> Base.min(a, x[1]), extremata; init=Inf)
+maxi = reduce((a, x) -> Base.max(a, x[2]), extremata; init=-Inf)
+if mini .- maxi ≈ 0
+    mini = mini .- 0.5
+    maxi = maxi .+ 0.5
+end
+@show mini maxi
+return Vec2f(mini, maxi)
+
+
 temperature = convert(Array{Float32}, data_cube[Variable=At("temp")].data)
 cubef32 = convert(Array{Float32}, data_cube.data);
 u = data_cube[:, :, :, :, 3][:, :, :, end]
@@ -45,18 +76,3 @@ layers = [
 ]
 
 NDViewer.plot_data(data, layers)
-
-
-("temperature" => ([1]))
-
-using Dates
-axlist = (
-    Dim{:tempo}(Date("2022-01-01"):Day(1):Date("2022-01-30")),
-    Dim{:lon}(range(1, 10, length=10)),
-    Dim{:lat}(range(1, 5, length=15)),
-    Dim{:level}(range(1, 7, length=7)),
-    Dim{:variable}(["var1", "var2"])
-)
-
-data = rand(30, 10, 15, 7, 2)
-ds = YAXArray(axlist, data)

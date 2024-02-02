@@ -1,13 +1,13 @@
+using Dates
+using DimensionalData
 
-function selection_widget(figure, label, options::AbstractVector{<: String})
+function selection_widget(figure, label, options::AbstractVector{<:String})
     l = Label(figure[1, 1], string(label), halign=:left)
     menu = Menu(figure[1, 2]; options=options)
     return menu.selection
 end
 
-using Dates
-
-function selection_widget(figure, label, range::AbstractVector{<: DateTime})
+function selection_widget(figure, label, range::AbstractVector{<:DateTime})
     selection_widget(figure, label, 1:length(range))
 end
 
@@ -25,15 +25,15 @@ function selection_widget(figure, label, range::AbstractVector{<:Number})
     ]
     playing = Threads.Atomic{Bool}(false)
     fps = Threads.Atomic{Int}(24)
+    scene = Makie.parent_scene(figure)
 
     for (b, s) in speed_button
-        on(b.clicks) do _
+        on(scene, b.clicks) do _
             fps[] = s
         end
     end
     colgap!(sgrid, 2)
     rowgap!(sgrid, 2)
-    scene = Makie.parent_scene(figure)
     was_opened = isopen(scene)
     Base.errormonitor(@async let i = first(range)
         while !was_opened || isopen(scene)
@@ -47,7 +47,7 @@ function selection_widget(figure, label, range::AbstractVector{<:Number})
             sleep(max(0.001, (1 / fps[]) - elapsed))
         end
     end)
-    on(button.clicks) do _
+    on(scene, button.clicks) do _
         if playing[]
             button.label[] = ">"
             playing[] = false
@@ -58,8 +58,6 @@ function selection_widget(figure, label, range::AbstractVector{<:Number})
     end
     return slider.value
 end
-
-using DimensionalData
 
 get_axis_values(array, dim) = collect(axes(array, dim))
 get_axis_values(array::AbstractDimArray, dim) = collect(dims(array, dim))
@@ -76,8 +74,11 @@ function slice_dim(figure, arr, dim, dim_name)
     end
 end
 
-function colormap_widget(f, limits, colorrange, lowclip, highclip, nan_color, alpha, colormap, colormaps=COLORMAPS)
+function colormap_widget(f, colorrange, lowclip, highclip, nan_color, alpha, colormap, colormaps=COLORMAPS)
     current_crange = colorrange[]
+    mini, maxi = current_crange
+    width_20 = (maxi - mini) * 0.2
+    limits = (mini - width_20, maxi + width_20)
     rs_h = IntervalSlider(f[1, 1],
         range=LinRange(limits..., 100),
         startvalues=(current_crange...,))
@@ -106,17 +107,15 @@ const COLORMAPS = [
     :lipari25
 ]
 
-function colormap_widget(f, data, colormaps=COLORMAPS)
-    # decent limits
-    limits = (-100, 100)
+function colormap_widget(f, colorrange, colormaps=COLORMAPS)
     kw = (
-        colorrange=Observable(Vec2f(limits)),
+        colorrange=colorrange,
         lowclip=Observable(:black),
         highclip=Observable(:red),
         nan_color=Observable(:transparent),
         alpha=Observable(1.0),
         colormap=Observable(:autumn1),
     )
-    colormap_widget(f, limits, kw.colorrange, kw.lowclip, kw.highclip, kw.nan_color, kw.alpha, kw.colormap, colormaps)
+    colormap_widget(f, kw.colorrange, kw.lowclip, kw.highclip, kw.nan_color, kw.alpha, kw.colormap, colormaps)
     return kw
 end
