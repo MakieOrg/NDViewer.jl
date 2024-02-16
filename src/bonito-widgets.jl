@@ -45,14 +45,36 @@ function PlayButton(slider, range, session)
     return button
 end
 
+format_value(v) = string(v)
+format_value(v::AbstractFloat) = round(v; digits=3)
+
 function Bonito.jsrender(session::Session, ps::PlaySlider)
     slider = Bonito.StylableSlider(ps.range)
     button = PlayButton(slider, ps.range, session)
     on(session, slider.value) do v
-        return ps.value[] = v
+        ps.value[] = v
+        return
     end
-    label = Centered(Bonito.Label("Time"))
-    widget_row = Bonito.Row(label, button, slider, Bonito.Label(slider.value);
-                            columns="4rem 4rem 1fr 4rem", align_items=:center)
+    value_obs = if ps.lookup !== nothing
+        map(x-> format_value(ps.lookup[x]), slider.value)
+    else
+        slider.value
+    end
+
+    label = Centered(Bonito.Label(ps.name))
+    widget_row = Bonito.Row(label, button, slider, Bonito.Label(value_obs);
+                            columns="4rem 4rem 1fr 10rem", align_items=:center)
+    return Bonito.jsrender(session, Card(widget_row))
+end
+
+function Bonito.jsrender(session::Session, so::SelectOptions)
+    dropdown = Bonito.Dropdown(so.options)
+    on(session, dropdown.value) do v
+        so.option[] = v
+        return
+    end
+    label = Centered(Bonito.Label(so.name))
+    widget_row = Bonito.Row(label, dropdown;
+        columns="4rem 1fr", align_items=:center)
     return Bonito.jsrender(session, Card(widget_row))
 end

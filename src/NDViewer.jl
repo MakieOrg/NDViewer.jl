@@ -1,6 +1,6 @@
 module NDViewer
 
-using Makie
+using Makie, DimensionalData, LinearAlgebra
 
 include("widgets.jl")
 include("bonito-widgets.jl")

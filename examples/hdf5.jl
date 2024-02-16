@@ -2,8 +2,8 @@ using HDF5, GLMakie
 using LinearAlgebra
 
 
-hydrodynamics = h5open("Hydrodynamic.hdf5", "r")
-water_properties = h5open("WaterProperties.hdf5", "r")
+hydrodynamics = h5open(joinpath(@__DIR__, "Hydrodynamic.hdf5"), "r")
+water_properties = h5open(joinpath(@__DIR__, "WaterProperties.hdf5"), "r")
 
 
 wp_results = water_properties["Results"]
@@ -29,6 +29,12 @@ velocity_u_1 = velocity_u["velocity U_00001"]
 velocity_v_1 = velocity_v["velocity V_00001"]
 velocity_w_1 = velocity_w["velocity W_00001"]
 
+
+
+
+u, v = velocity_u_1[][:, :, end], velocity_v_1[][:, :, end]
+
+arrows(0..10, 0..10, velocity_u_1[][:, :, end], velocity_v_1[][:, :, end], arrowsize=0)
 
 data = Vec3f.(velocity_u_1[], velocity_v_1[], velocity_w_1[])[1:5:end, 1:5:end, 1:5:end]
 points = Point3f.(Tuple.(CartesianIndices(data)))

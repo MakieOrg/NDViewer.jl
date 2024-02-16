@@ -1,26 +1,23 @@
 
-function match_dims(a, b)
+function match_dims(m, target)
     # same
-    a == b && return -1000
-    na = length(a)
-    nb = length(b)
+    m == target && return -1000
+    na = length(m)
+    nb = length(target)
     # permutation
-    na == nb && all(x -> x in a, b) && return -900
+    na == nb && all(x -> x in m, target) && return -900
     # ready to slice
-    nb == na - 1 && a[1:nb] == b && return -800
-    if all(x -> (x in a), b)
-        i = 0
-        for (x, y) in zip(a, b)
-            if x == y
-                i -= 1
-            else
-                i += 1
-            end
+    nb == na - 1 && m[1:nb] == target && return -800
+    i = 0
+    for (x, y) in zip(m, target)
+        if x == y
+            i -= 1
+        else
+            i += 1
         end
-        return i
     end
+    return (i + length(m)) # penalize by length
     # no match
-    return 1000
 end
 
 # TODO, fix the stackoverflow
@@ -39,6 +36,7 @@ function get_dims!(arrays::Dict, widgets, target_dims::Vector{Int}, names::Vecto
         arrays[target_dims] = data
         return
     elseif length(closest) == length(target_dims) + 1
+        # if closest is one dimension larger than target_dims, we can slice
         dim_to_slice = only(setdiff(closest, target_dims))
         name = names[dim_to_slice]
         data, widget = slice_dim(input_data, dim_to_slice, name)
@@ -117,7 +115,9 @@ function create_plot(data, layers; figure=(;))
             volume!(ax, slices[layer["data"]]; shading=NoShading, levels=10, algorithm=:absorption,
                     colormaps...)
         else
-            plotfunc(fplots[1, i], map(x-> convert(Array{Float32}, x), slices[layer["data"]]); colormaps...)
+            attr = get(layer, "attributes", Dict())
+            kw = map(((a, b),) -> Symbol(a) => b, collect(attr))
+            plotfunc(fplots[1, i], slices[layer["data"]]; kw...)
         end
     end
     cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
@@ -128,7 +128,33 @@ end
 function wgl_create_plot(data, layers; figure=(;))
     return App() do
         f, slices, widgets = create_plot(data, layers; figure=figure)
-        app = Col(Bonito.Row(values(widgets)...), Card(f); style=Styles("width" => "1000px"))
+        app = Col(Bonito.Col(values(widgets)...), Card(f); style=Styles("width" => "1000px"))
         return Centered(app; style=Styles("width" => "100%"))
     end
+end
+
+function Makie.convert_arguments(::Type{Arrows}, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real}, w_matrix::AbstractMatrix{<:Real})
+    data = Vec3f.(u_matrix, v_matrix, w_matrix)
+    points = Point3f.(Tuple.(CartesianIndices(data)))
+    return PlotSpec(:Arrows, vec(points), vec(data), color=norm.(vec(data)))
+end
+
+function Makie.convert_arguments(::Type{Arrows}, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real})
+    return convert_arguments(Arrows, 1:size(u_matrix, 1), 1:size(u_matrix, 2), u_matrix, v_matrix)
+end
+
+function Makie.convert_arguments(::Type{Arrows}, xrange::Makie.AbstractVector{<:Real}, yrange::AbstractVector{<:Real}, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real})
+    xvec = Makie.to_vector(xrange, size(u_matrix, 1), Float32)
+    yvec = Makie.to_vector(yrange, size(u_matrix, 2), Float32)
+    data = Vec2f.(u_matrix, v_matrix)
+    points = Point2f.(xvec, yvec')
+    return PlotSpec(:Arrows, vec(points), vec(data), color=norm.(vec(data)))
+end
+
+function Makie.convert_arguments(::Type{Arrows}, xrange::Makie.RangeLike, yrange::Makie.RangeLike, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real})
+    xvec = Makie.to_vector(xrange, size(u_matrix, 1), Float32)
+    yvec = Makie.to_vector(yrange, size(u_matrix, 2), Float32)
+    data = Vec2f.(u_matrix, v_matrix)
+    points = Point2f.(xvec, yvec')
+    return PlotSpec(:Arrows, vec(points), vec(data), color=norm.(vec(data)))
 end

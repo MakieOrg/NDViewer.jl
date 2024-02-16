@@ -1,35 +1,36 @@
-using YAXArrays, GLMakie, NDViewer
-using YAXArrays, NetCDF
+using Bonito, WGLMakie, NDViewer
+using NetCDF, YAXArrays
 using DimensionalData
+
 data_cube = Cube(joinpath(@__DIR__, "speedyweather.nc"))
-vars = collect(data_cube.Variable)
 
-temperature = convert(Array{Float32}, data_cube[Variable=At("temp")].data)
+layers = [
+    Dict(
+        "type" => heatmap,
+        # "attributes" => Dict("colorrange" => colorrange),
+        "data" => [1, 2]
+    )
+]
+data = (data=data_cube,
+    names=map(x -> name(x.dim), collect(axes(data_cube))));
 
-data = (data=temperature,
-        names=["x", "y", "z", "time"]);
+NDViewer.wgl_create_plot(data, layers)
 
-layers = [Dict("type" => volume,
-               "data" => [1, 2, 3]),
-          Dict("type" => heatmap,
-               "data" => [1, 2])]
 
-NDViewer.plot_data(data, layers)
-
-using YAXArrays, WGLMakie, NDViewer
 using Zarr, DiskArrays
-using DimensionalData
 path = "gs://cmip6/CMIP6/ScenarioMIP/DKRZ/MPI-ESM1-2-HR/ssp585/r1i1p1f1/3hr/tas/gn/v20190710"
 g = open_dataset(zopen(path; consolidated=true))
 
 data_cube = DimensionalData.modify(g.tas) do arr
     return DiskArrays.CachedDiskArray(arr)
 end
-
+vec(view(data_cube, :, :, 1))
 data = (data=data_cube,
-        names=map(x -> name(x.dim), collect(axes(data_cube))));
+    names=map(x -> name(x.dim), collect(axes(data_cube))));
 
 layers = [Dict("type" => heatmap,
-               "data" => [1, 2])]
+    "data" => [1, 2])]
+
+# vec(view(data_cube, :, :, 1)) # fails on Makie#master because of this!
 
 NDViewer.wgl_create_plot(data, layers)
