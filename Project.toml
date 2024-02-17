@@ -12,6 +12,7 @@ Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
 
 [compat]
 Bonito = "3"
+DimensionalData = "0.25"
 Makie = "0.20"
 Observables = "0.5"
 julia = "1"
