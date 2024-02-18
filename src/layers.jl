@@ -29,8 +29,8 @@ function get_dims!(arrays::Dict, widgets, target_dims::Vector{Int}, names::Vecto
     sort!(available; by=x -> match_dims(x, target_dims))
     closest = first(available)
     input_data = arrays[closest]
-    if any(x -> x > ndims(input_data[]), target_dims)
-        throw(ArgumentError("target_dims must be a subset of the dimensions of data"))
+    if any(x -> x > maximum(closest), target_dims)
+        throw(ArgumentError("target_dims must be a subset of the dimensions of data. Found: $(target_dims)"))
     elseif length(closest) == length(target_dims)
         data = map(x -> permutedims(x, (target_dims...,)), input_data)
         arrays[target_dims] = data
@@ -47,7 +47,7 @@ function get_dims!(arrays::Dict, widgets, target_dims::Vector{Int}, names::Vecto
     else
         missing_dims = sort(setdiff(closest, target_dims))
         new_target_dims = filter(x -> x != missing_dims[end], closest)
-        get_dims!(arrays, widgets, new_target_dims, names)
+        get_dims!(arrays, widgets, convert(Vector{Int}, new_target_dims), names)
         return get_dims!(arrays, widgets, target_dims, names)
     end
 end
@@ -64,22 +64,34 @@ function plot_data(data, layers; figure=(;))
     return
 end
 
-function create_slices(layers, data)
-    slices = map(layer -> layer["data"], layers)
-    sort!(slices; by=length, rev=true)
 
-    input_data = convert(Observable, data.data)
+accessor2dim(x::Pair{Int,T}) where T = Int(x[1])
+accessor2dim(x::Integer) = Int(x)
+
+dim2accessor(x::Pair{Int,T}) where T = x[2]
+dim2accessor(::Integer) = (:)
+
+function create_slices(layers, data::AbstractArray)
+    input_data = convert(Observable, data)
+
+    names = get_dim_names(input_data[])
     dims = collect(1:ndims(input_data[]))
 
-    result = Dict{Vector{Int},Observable}(dims => input_data)
+    sliced_arrays = Dict{Vector{Any},Observable}(dims => input_data)
     widgets = Dict{String,Any}()
-    names = map(string, data.names)
 
+    slices = []
+    for layer in layers
+        for arg in layer["args"]
+            push!(slices, Int[accessor2dim(a) for a in arg])
+        end
+    end
+    sort!(slices; by=length, rev=true)
     for slice in slices
-        get_dims!(result, widgets, slice, names)
+        get_dims!(sliced_arrays, widgets, slice, names)
     end
 
-    used_data = map(slice -> result[slice], slices)
+    used_data = map(slice -> sliced_arrays[slice], slices)
     last_min, last_max = Inf, -Inf
     colorrange = lift(used_data...) do args...
         extremata = map(Makie.extrema_nan, [args...])
@@ -95,8 +107,37 @@ function create_slices(layers, data)
         last_max = maxi
         return Vec2f(mini, maxi)
     end
-    return result, widgets, colorrange
+    return sliced_arrays, widgets, colorrange
 end
+
+function access2slice(sliced_arrays, arg::Vector)
+    # unwrap something like [1, 2=>3] to [1, 2]
+    flat = map(accessor2dim, arg)
+    # get the array slice for the flat dims
+    # Should be guaranteed to exist, as long as create_slices was called on the same args before
+    array_slice_obs = sliced_arrays[flat]
+    # Now, apply the `=>` parts (if any existed) and cache it in sliced_arrays
+    return get!(sliced_arrays, arg) do
+        map(arr -> collect(view(arr, map(dim2accessor, arg)...)), array_slice_obs)
+    end
+end
+
+function replace_slices(sliced_arrays, args::Vector{<:Vector})
+    return map(args) do arg
+        access2slice(sliced_arrays, arg)
+    end
+end
+
+function replace_slices(sliced_arrays, attributes::Dict)
+    return Dict(map(collect(attributes)) do (k, value)
+        if value isa Dict && haskey(value, "slice")
+            value = access2slice(sliced_arrays, value["slice"])
+        end
+        return Symbol(k) => value
+    end)
+end
+
+
 
 function create_plot(data, layers; figure=(;))
     size = get(figure, :size, (1000, 700))
@@ -105,24 +146,24 @@ function create_plot(data, layers; figure=(;))
     fcbar = f[2, 1]
     fcolor = f[3, 1]
 
-    slices, widgets, colorrange = create_slices(layers, data)
+    sliced_arrays, widgets, colorrange = create_slices(layers, data)
     colormaps = colormap_widget(fcolor, colorrange)
 
     for (i, layer) in enumerate(layers)
         plotfunc = layer["type"]
+        args = replace_slices(sliced_arrays, layer["args"])
+        attr = get(layer, "attributes", Dict())
+        attributes = replace_slices(sliced_arrays, attr)
         if plotfunc == volume
             ax = Axis3(fplots[1, i];)
-            volume!(ax, slices[layer["data"]]; shading=NoShading, levels=10, algorithm=:absorption,
-                    colormaps...)
+            volume!(ax, args...; attributes...)
         else
-            attr = get(layer, "attributes", Dict())
-            kw = map(((a, b),) -> Symbol(a) => b, collect(attr))
-            plotfunc(fplots[1, i], slices[layer["data"]]; kw...)
+            plotfunc(fplots[1, i], args...; attributes...)
         end
     end
     cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
     Colorbar(fcbar[1, 1]; vertical=false, tellheight=true, tellwidth=true, cmaps...)
-    return f, slices, widgets
+    return f, sliced_arrays, widgets
 end
 
 function wgl_create_plot(data, layers; figure=(;))
@@ -131,30 +172,4 @@ function wgl_create_plot(data, layers; figure=(;))
         app = Col(Bonito.Col(values(widgets)...), Card(f); style=Styles("width" => "1000px"))
         return Centered(app; style=Styles("width" => "100%"))
     end
-end
-
-function Makie.convert_arguments(::Type{Arrows}, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real}, w_matrix::AbstractMatrix{<:Real})
-    data = Vec3f.(u_matrix, v_matrix, w_matrix)
-    points = Point3f.(Tuple.(CartesianIndices(data)))
-    return PlotSpec(:Arrows, vec(points), vec(data), color=norm.(vec(data)))
-end
-
-function Makie.convert_arguments(::Type{Arrows}, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real})
-    return convert_arguments(Arrows, 1:size(u_matrix, 1), 1:size(u_matrix, 2), u_matrix, v_matrix)
-end
-
-function Makie.convert_arguments(::Type{Arrows}, xrange::Makie.AbstractVector{<:Real}, yrange::AbstractVector{<:Real}, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real})
-    xvec = Makie.to_vector(xrange, size(u_matrix, 1), Float32)
-    yvec = Makie.to_vector(yrange, size(u_matrix, 2), Float32)
-    data = Vec2f.(u_matrix, v_matrix)
-    points = Point2f.(xvec, yvec')
-    return PlotSpec(:Arrows, vec(points), vec(data), color=norm.(vec(data)))
-end
-
-function Makie.convert_arguments(::Type{Arrows}, xrange::Makie.RangeLike, yrange::Makie.RangeLike, u_matrix::AbstractMatrix{<:Real}, v_matrix::AbstractMatrix{<:Real})
-    xvec = Makie.to_vector(xrange, size(u_matrix, 1), Float32)
-    yvec = Makie.to_vector(yrange, size(u_matrix, 2), Float32)
-    data = Vec2f.(u_matrix, v_matrix)
-    points = Point2f.(xvec, yvec')
-    return PlotSpec(:Arrows, vec(points), vec(data), color=norm.(vec(data)))
 end

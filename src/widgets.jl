@@ -33,16 +33,6 @@ function select_dim_widget(name, pairs::AbstractVector{<:Pair{<:Any,<:Integer}})
     return PlaySlider(name, indices, lookup)
 end
 
-function get_axis(array::AbstractArray, nd)
-    collect(axes(array, nd))
-end
-
-function get_axis(array::AbstractDimArray, nd)
-    names = collect(dims(array, nd))
-    indices = collect(axes(array, nd))
-    return Pair.(names, indices)
-end
-
 function slice_dim(arr, dim::Int, dim_name::String)
     arr_obs = convert(Observable, arr)
     axes = get_axis(arr_obs[], dim)
