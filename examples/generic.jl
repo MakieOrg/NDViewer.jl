@@ -1,6 +1,7 @@
 using Bonito, WGLMakie, NDViewer
 using NetCDF, YAXArrays
 using DimensionalData
+using Random
 
 data_cube = Cube(joinpath(@__DIR__, "speedyweather.nc"))
 layers = [
@@ -8,13 +9,20 @@ layers = [
         "type" => heatmap,
         # "attributes" => Dict("colorrange" => colorrange),
         "args" => [[1, 2]],
-        "attributes" => Dict(
-            "colorrange" => [0, 1],
-        )
+    ),
+    Dict(
+        "type" => lines,
+        "args" => [[1]],
+        "attributes" => Dict("color" => "black")
     )
 ]
 
-NDViewer.wgl_create_plot(data_cube, layers)
+
+dd = data_cube = DimensionalData.modify(data_cube) do arr
+    return convert(Array{Float32}, arr)
+end
+
+NDViewer.wgl_create_plot(dd, layers)
 
 
 layers = [
@@ -35,7 +43,6 @@ g = open_dataset(zopen(path; consolidated=true))
 data_cube = DimensionalData.modify(g.tas) do arr
     return DiskArrays.CachedDiskArray(arr)
 end
-vec(view(data_cube, :, :, 1))
 data = (data=data_cube,
     names=map(x -> name(x.dim), collect(axes(data_cube))));
 
