@@ -1,0 +1,10 @@
+data:
+  path: "gs://cmip6/CMIP6/ScenarioMIP/DKRZ/MPI-ESM1-2-HR/ssp585/r1i1p1f1/3hr/tas/gn/v20190710"
+layers:
+  - figure:
+      size: [1000, 800]
+  - type: Axis
+    position: [1, 1]
+    plots:
+      - type: image
+        args: [[1, 2]]

@@ -1,0 +1,31 @@
+data:
+  path: "c:\\Users\\sdani\\Programmieren\\MakieDev\\dev\\NDViewer\\examples\\speedyweather.nc"
+layers:
+  - layout:
+      rowsize: [0.8, 0.2]
+  - figure:
+      size: [1000, 800]
+  - layout:
+      rowsize: [0.8, 0.2]
+  - type: Axis
+    position: [1, 1]
+    attributes:
+      aspect: DataAspect
+    plots:
+      - type: image
+        attributes:
+          colormap: viridis
+        args: [[1, 2]]
+  - type: Axis
+    position: [2, 1]
+    plots:
+      - type: lines
+        args: [[1]]
+        attributes:
+          color: black
+          linewidth: 2
+      - type: lines
+        args: [[2]]
+        attributes:
+          color: blue
+          linewidth: 2

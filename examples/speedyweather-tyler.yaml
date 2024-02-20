@@ -1,0 +1,25 @@
+data:
+  path: "c:\\Users\\sdani\\Programmieren\\MakieDev\\dev\\NDViewer\\examples\\speedyweather.nc"
+layers:
+  - figure:
+      size: [1000, 1000]
+  - type: Axis
+    position: [1, 1]
+    attributes:
+      aspect: DataAspect
+    plots:
+      - type: image
+        attributes:
+          colormap: viridis
+        args: [[1, 2]]
+  - type: Tyler
+    position: [2, 1]
+    attributes:
+      provider: OpenTopoMap
+    plots:
+      - type: linesegments
+        args: [[1, 2, {5: 5}], [1, 2, {5: 3}]]
+        attributes:
+          colormap: autumn1
+          alpha: 0.5
+          linewidth: 1

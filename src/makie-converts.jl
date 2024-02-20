@@ -33,5 +33,20 @@ function Makie.convert_arguments(::Type{<:LineSegments}, u_matrix::AbstractMatri
     points = map(positions, directions) do pos, dir
         return pos => (pos .+ dir)
     end
-    return PlotSpec(:LineSegments, convert_arguments(LineSegments, vec(points))..., cycle=[])
+    norms = norm.(vec(directions))
+    return PlotSpec(:LineSegments, convert_arguments(LineSegments, vec(points))..., cycle=[], color=norms)
+end
+
+function Makie.convert_arguments(::Type{<:LineSegments}, u_matrix::AbstractDimArray{<:Real}, v_matrix::AbstractDimArray{<:Real})
+    xvec = collect(dims(u_matrix, 1))
+    yvec = collect(dims(u_matrix, 2))
+    directions = Point2f.(convert(Matrix{Float32}, u_matrix), convert(Matrix{Float32}, v_matrix))
+    positions = Point2f.(xvec, yvec')
+    points = map(positions, directions) do pos, dir
+        return pos => (pos .+ (dir ./5))
+    end
+    radiance = map(vec(directions)) do p
+        atan(p...)
+    end
+    return PlotSpec(:LineSegments, convert_arguments(LineSegments, vec(points))..., cycle=[], color=radiance)
 end

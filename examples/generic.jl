@@ -1,54 +1,37 @@
 using Bonito, WGLMakie, NDViewer
-using NetCDF, YAXArrays
-using DimensionalData
-using Random
-
-data_cube = Cube(joinpath(@__DIR__, "speedyweather.nc"))
-layers = [
-    Dict(
-        "type" => heatmap,
-        # "attributes" => Dict("colorrange" => colorrange),
-        "args" => [[1, 2]],
-    ),
-    Dict(
-        "type" => lines,
-        "args" => [[1]],
-        "attributes" => Dict("color" => "black")
-    )
-]
 
 
-dd = data_cube = DimensionalData.modify(data_cube) do arr
-    return convert(Array{Float32}, arr)
+function create_app_from_yaml(file)
+    yaml_str = read(file, String)
+    viewer = NDViewer.load_from_yaml(yaml_str)
+    app = App() do
+        editor = CodeEditor("yaml"; initial_source=yaml_str, width=300, height=600, foldStyle="manual")
+        css = DOM.style("""
+        .ace_scrollbar-v,
+        .ace_scrollbar-h {
+            display: none !important;
+        }
+        """)
+        set_editor = js"""
+            const editor = ace.edit($(editor.element))
+            editor.setReadOnly(true);
+        """
+        yaml_display = DOM.div(css, Card(editor; width="fit-content"), set_editor)
+        style = Styles("word-wrap" => "break-word")
+        app_dom = Grid(
+            yaml_display, viewer;
+            justify_content="center",
+            # align_items="center",
+            style=Styles("grid-auto-flow" => "column")
+        )
+        return Centered(app_dom; style=Styles("width" => "100%"))
+    end
+    return app, viewer
 end
 
-NDViewer.wgl_create_plot(dd, layers)
+app1, viewer = create_app_from_yaml(joinpath(@__DIR__, "speedyweather.yaml")); app1
+NDViewer.add_slice_view(viewer, 1, 1, 1, :black)
+NDViewer.add_slice_view(viewer, 1, 1, 2, :blue)
 
-
-layers = [
-    Dict(
-        "type" => linesegments,
-        "args" => [[1, 2, 5 => 5], [1, 2, 5 => 3]],
-        "attributes" => Dict("color" => "black")
-    )
-]
-
-linesegments(data_cube[:, :, 5, 10, 5], data_cube[:, :, 5, 10, 3])
-NDViewer.wgl_create_plot(data_cube, layers)
-
-using Zarr, DiskArrays
-path = "gs://cmip6/CMIP6/ScenarioMIP/DKRZ/MPI-ESM1-2-HR/ssp585/r1i1p1f1/3hr/tas/gn/v20190710"
-g = open_dataset(zopen(path; consolidated=true))
-
-data_cube = DimensionalData.modify(g.tas) do arr
-    return DiskArrays.CachedDiskArray(arr)
-end
-data = (data=data_cube,
-    names=map(x -> name(x.dim), collect(axes(data_cube))));
-
-layers = [Dict("type" => heatmap,
-    "data" => [1, 2])]
-
-# vec(view(data_cube, :, :, 1)) # fails on Makie#master because of this!
-
-NDViewer.wgl_create_plot(data, layers)
+app2, viewer = create_app_from_yaml(joinpath(@__DIR__, "speedyweather-tyler.yaml")); app2
+app3, viewer = create_app_from_yaml(joinpath(@__DIR__, "tas-gn-64gb.yaml")); app3

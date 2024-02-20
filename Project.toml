@@ -6,9 +6,18 @@ version = "1.0.0-DEV"
 [deps]
 Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+DiskArrays = "3c3547ce-8d99-4f5e-a174-61eb10b00ae3"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+MapTiles = "fea52e5a-b371-463b-85f5-81770daa2737"
+NetCDF = "30363a11-5582-574a-97bb-aa9a979735b9"
 Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+Tyler = "e170d443-b9d6-418a-9ee8-061e966341ef"
+YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
+YAXArrays = "c21b50f5-aa40-41ea-b809-c0f5e47bfa5c"
+Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
 [compat]
 Bonito = "3"
