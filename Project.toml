@@ -24,6 +24,7 @@ Bonito = "3"
 DimensionalData = "0.25"
 Makie = "0.20"
 NetCDF = "0.11"
+MapTiles = "1"
 Observables = "0.5"
 julia = "1"
 
