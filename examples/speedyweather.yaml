@@ -22,10 +22,10 @@ layers:
       - type: lines
         args: [[1]]
         attributes:
-          color: black
+          color: orangered
           linewidth: 2
       - type: lines
         args: [[2]]
         attributes:
-          color: blue
+          color: dodgerblue
           linewidth: 2

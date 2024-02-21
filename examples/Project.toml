@@ -1,6 +1,7 @@
 [deps]
 Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+DiskArrays = "3c3547ce-8d99-4f5e-a174-61eb10b00ae3"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
@@ -9,3 +10,4 @@ NetCDF = "30363a11-5582-574a-97bb-aa9a979735b9"
 Tyler = "e170d443-b9d6-418a-9ee8-061e966341ef"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 YAXArrays = "c21b50f5-aa40-41ea-b809-c0f5e47bfa5c"
+Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
