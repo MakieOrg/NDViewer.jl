@@ -1,0 +1,15 @@
+data:
+  path: "./dev/NDViewer/examples/speedyweather.nc"
+layers:
+  - figure:
+      size: [1000, 800]
+  - type: Axis3
+    position: [1, 1]
+    plots:
+      - type: volume
+        args: [[1, 2, 3]]
+  - type: Axis
+    position: [1, 2]
+    plots:
+      - type: image
+        args: [[1, 2]]

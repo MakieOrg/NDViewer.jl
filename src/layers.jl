@@ -154,13 +154,15 @@ function layer_to_plot!(ax::Makie.AbstractAxis, sliced_arrays, dict, fcolor, cma
     args = replace_slices(sliced_arrays, dict["args"])
     attr = get(dict, "attributes", Dict())
     attributes = replace_slices(sliced_arrays, attr)
-    if plotfunc in (heatmap, image, surface)
+    if (plotfunc in (heatmap, image, surface, volume)) || dict["type"] == "sphereplot"
         crange = get(attributes, :colorrange, nothing)
         if crange === nothing
-            crange = map(Makie.extrema_nan, last(args))
-            idx = length(cmaps)
-            colormaps = colormap_widget(fcolor[idx+1, 1], crange)
-            push!(cmaps, colormaps)
+            cmap_slice = last(dict["args"])
+            colormaps = get!(cmaps, cmap_slice) do
+                idx = length(cmaps)
+                crange = map(Makie.extrema_nan, last(args))
+                colormap_widget(fcolor[idx+1, 1], crange)
+            end
             for (k, v) in pairs(colormaps)
                 attributes[k] = v
             end
@@ -183,6 +185,8 @@ function resolve_symbol(s::String)
     end
     if hasproperty(Makie, name)
         return getfield(Makie, name)
+    elseif hasproperty(NDViewer, name)
+        return getfield(NDViewer, name)
     else
         return s
     end
@@ -251,7 +255,7 @@ function create_plot(data, layers;)
     fcolor = f[3, 1]
     layouts = remove_dicts!(x-> haskey(x, "layout"), layers)
     sliced_arrays, widgets = create_slices(layers, data)
-    cmaps = []
+    cmaps = Dict()
     axes = map(layers) do axlayer
         layer_to_axis!(fplots, sliced_arrays, axlayer, fcolor, cmaps)
     end
@@ -268,12 +272,13 @@ function create_plot(data, layers;)
             end
         end
     end
-    for (i, colormaps) in enumerate(cmaps)
-        cmaps = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
-        Colorbar(fcbar[i, 1]; vertical=false, tellheight=true, tellwidth=true, cmaps...)
+    for (i, colormaps) in enumerate(values(cmaps))
+        cmap_attr = Base.structdiff(colormaps, (; nan_color=0, alpha=0))
+        Colorbar(fcbar[i, 1]; vertical=false, tellheight=true, tellwidth=true, cmap_attr...)
     end
     return f, sliced_arrays, widgets, axes
 end
+
 
 struct DataViewerApp
     layers
@@ -298,13 +303,10 @@ function wgl_create_plot(data, layers)
     return DataViewerApp(layers, data, f, slices, widgets, axes)
 end
 
-
 function Base.display(viewer::DataViewerApp)
     app = App(viewer; title="DataViewer")
     display(app)
 end
-
-
 
 function add_index_slice(axis::Makie.AbstractAxis, plot, index_obs, dim, color)
     dim_data = dim == 2 ? plot.y : plot.x

@@ -50,3 +50,15 @@ function Makie.convert_arguments(::Type{<:LineSegments}, u_matrix::AbstractDimAr
     end
     return PlotSpec(:LineSegments, convert_arguments(LineSegments, vec(points))..., cycle=[], color=radiance)
 end
+
+@recipe(SpherePlot, image) do scene
+    attr = Attributes()
+    Makie.MakieCore.colormap_attributes!(attr, :viridis)
+    attr
+end
+
+function Makie.plot!(p::SpherePlot)
+    GB = Makie.GeometryBasics
+    sm = GB.uv_normal_mesh(GB.Tesselation(Sphere(Point3f(0), 1.0f0), 100))
+    mesh!(p, sm, color=map(x -> x', p[3]); Makie.MakieCore.colormap_attributes(p)...)
+end

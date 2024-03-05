@@ -1,0 +1,17 @@
+data:
+  path: "./dev/NDViewer/examples/speedyweather.nc"
+layers:
+  - figure:
+      size: [1000, 800]
+  - type: LScene
+    position: [1, 1]
+    attributes:
+      show_axis: false
+    plots:
+      - type: sphereplot
+        args: [[1, 2]]
+  - type: Axis
+    position: [1, 2]
+    plots:
+      - type: image
+        args: [[1, 2]]

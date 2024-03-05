@@ -1,5 +1,5 @@
 data:
-  path: "c:\\Users\\sdani\\Programmieren\\MakieDev\\dev\\NDViewer\\examples\\speedyweather.nc"
+  path: ".\\dev\\NDViewer\\examples\\speedyweather.nc"
 layers:
   - layout:
       rowsize: [0.8, 0.2]
