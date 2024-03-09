@@ -38,3 +38,34 @@ function load_from_yaml(yaml_str)
     layers = data["layers"]
     wgl_create_plot(data_cube, layers)
 end
+
+function create_app_from_yaml(file)
+    yaml_str = read(file, String)
+    create_app_from_yaml_str(yaml_str)
+end
+
+function create_app_from_yaml_str(yaml_str)
+    app = App() do
+        viewer = NDViewer.load_from_yaml(yaml_str)
+        editor = CodeEditor("yaml"; initial_source=yaml_str, width=300, height=600, foldStyle="manual")
+        css = DOM.style("""
+        .ace_scrollbar-v,
+        .ace_scrollbar-h {
+            display: none !important;
+        }
+        """)
+        set_editor = Bonito.js"""
+            const editor = ace.edit($(editor.element))
+            editor.setReadOnly(true);
+        """
+        yaml_display = DOM.div(css, Card(editor; width="fit-content"), set_editor)
+        app_dom = Grid(
+            yaml_display, viewer;
+            justify_content="center",
+            # align_items="center",
+            style=Styles("grid-auto-flow" => "column")
+        )
+        return Centered(app_dom; style=Styles("width" => "100%"))
+    end
+    return app
+end

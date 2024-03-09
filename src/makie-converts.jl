@@ -45,8 +45,8 @@ function Makie.convert_arguments(::Type{<:LineSegments}, u_matrix::AbstractDimAr
     points = map(positions, directions) do pos, dir
         return pos => (pos .+ (dir ./5))
     end
-    radiance = map(vec(directions)) do p
-        atan(p...)
-    end
-    return PlotSpec(:LineSegments, convert_arguments(LineSegments, vec(points))..., cycle=[], color=radiance)
+    # radiance = map(vec(directions)) do p
+        # atan(p...)
+    # end
+    return PlotSpec(:LineSegments, convert_arguments(LineSegments, vec(points))..., cycle=[])
 end

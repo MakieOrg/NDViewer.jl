@@ -68,13 +68,26 @@ function plot_data(data, layers; figure=(;))
     return
 end
 
+resolve_symbol(s) = s
+function resolve_symbol(s::String)
+    name = Symbol(s)
+    if name == :DataAspect
+        return DataAspect()
+    end
+    if hasproperty(Makie, name)
+        return getfield(Makie, name)
+    else
+        return s
+    end
+end
+
 
 accessor2dim(x::Dict) = Int(first(x)[1])
-accessor2dim(x::Pair{Int,T}) where {T} = Int(x[1])
+accessor2dim(x::Pair) where {T} = Int(x[1])
 accessor2dim(x::Integer) = Int(x)
 
 dim2accessor(x::Dict) = Int(first(x)[2])
-dim2accessor(x::Pair{Int,T}) where {T} = x[2]
+dim2accessor(x::Pair) where {T} = x[2]
 dim2accessor(::Integer) = (:)
 
 function get_colorrange(used_data)
@@ -109,8 +122,13 @@ function create_slices(layers, data::AbstractArray)
     slices = []
     for axlayer in layers
         for layer in axlayer["plots"]
-            for arg in layer["args"]
-                push!(slices, Int[accessor2dim(a) for a in arg])
+            for args in layer["args"]
+                for arg in args
+                    result = accessor2dim(arg)
+                    if !isnothing(result)
+                        push!(slices, result)
+                    end
+                end
             end
         end
     end
@@ -120,6 +138,10 @@ function create_slices(layers, data::AbstractArray)
     end
 
     return sliced_arrays, widgets
+end
+
+function access2slice(sliced_arrays, arg::Vector)
+
 end
 
 function access2slice(sliced_arrays, arg::Vector)
@@ -142,8 +164,14 @@ end
 
 function replace_slices(sliced_arrays, attributes::Dict)
     return Dict{Symbol, Any}(map(collect(attributes)) do (k, value)
-        if value isa Dict && haskey(value, "slice")
-            value = access2slice(sliced_arrays, value["slice"])
+
+        if value isa Dict
+            if haskey(value, "slice")
+                value = access2slice(sliced_arrays, value["slice"])
+            end
+            if haskey(value, "julia_type")
+                value = eval(Meta.parse(value["julia_type"]))
+            end
         end
         return Symbol(k) => value
     end)
@@ -174,18 +202,6 @@ using Tyler, MapTiles
 function project(p)
     p = p .- Point2f(180, 0)
     Point2f(MapTiles.project(p, MapTiles.wgs84, MapTiles.web_mercator))
-end
-resolve_symbol(s) = s
-function resolve_symbol(s::String)
-    name = Symbol(s)
-    if name == :DataAspect
-        return DataAspect()
-    end
-    if hasproperty(Makie, name)
-        return getfield(Makie, name)
-    else
-        return s
-    end
 end
 
 function layer_to_axis!(fig, sliced_arrays, dict, fcolor, cmaps)
