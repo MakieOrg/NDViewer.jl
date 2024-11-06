@@ -58,14 +58,12 @@ function get_dims!(arrays::Dict, widgets, target_dims::Vector{Int}, names::Vecto
 end
 
 function plot_data(data, layers; figure=(;))
-    size = get(figure, :size, (1200, 800))
-    f = Figure(; figure..., size=size)
-    fcolor = f[1, 1]
-    fplots = f[2, 1]
-    slices, widgets, colorrange = create_slices(layers, data)
-    colormaps = colormap_widget(fcolor, colorrange)
-    slices, widgets = create_plot(fplots, slices, colormaps)
-    return
+    f, slices, widgets, axes = create_plot(data, layers; figure=figure)
+    sub = f[end + 1, :]
+    for (i, w) in enumerate(values(widgets))
+        widget(sub[i, :], w)
+    end
+    return f
 end
 
 
@@ -237,7 +235,7 @@ function remove_dicts!(f, dicts)
     return result
 end
 
-function create_plot(data, layers;)
+function create_plot(data, layers; figure=(;))
     layers = copy(layers)
     figure_kw = remove_dicts!(x -> haskey(x, "figure"), layers)
     if length(figure_kw) == 1
@@ -247,7 +245,7 @@ function create_plot(data, layers;)
             return Symbol(k) => v
         end
     else
-        f_kw = Dict()
+        f_kw = figure
     end
     f = Figure(; f_kw...)
     fplots = f[1, 1]

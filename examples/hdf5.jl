@@ -1,4 +1,4 @@
-using HDF5, GLMakie
+using HDF5, GLMakie, NDViewer
 using LinearAlgebra
 
 
@@ -15,8 +15,21 @@ arr[1]
 with_time = cat(arr...; dims=4)
 x = with_time[1]
 filtered = map(y -> x ≈ y ? NaN : y, with_time)
-filtered0 = map(y -> x ≈ y ? 0f0 : y, tmp1)
-create_plot(filtered)
+
+layout = [
+    Dict(
+        "type" => "Axis3",
+        "position" => [1, 1],
+        "plots" => [
+            Dict(
+                "type" => "volume",
+                "args" => [[1, 2, 3]]
+            )
+        ]
+    )
+]
+
+f = NDViewer.plot_data(filtered, layout)
 
 grid = hydrodynamics["Grid"]
 bathymetry = grid["Bathymetry"]
@@ -30,8 +43,6 @@ velocity_v_1 = velocity_v["velocity V_00001"]
 velocity_w_1 = velocity_w["velocity W_00001"]
 
 
-
-
 u, v = velocity_u_1[][:, :, end], velocity_v_1[][:, :, end]
 
 arrows(0..10, 0..10, velocity_u_1[][:, :, end], velocity_v_1[][:, :, end], arrowsize=0)
@@ -40,50 +51,22 @@ data = Vec3f.(velocity_u_1[], velocity_v_1[], velocity_w_1[])[1:5:end, 1:5:end, 
 points = Point3f.(Tuple.(CartesianIndices(data)))
 arrows(vec(points), vec(data), arrowsize=0.5, color=norm.(vec(data)))
 
-vec(points)
-vec(points)[1:5:end]
 
-f = Figure()
-s = Slider(f[1, 1], range=range(mini, maxi, length=100))
-volume(f[2, 1], data, algorithm=:iso, isovalue=s.value)
+layout = [
+    Dict(
+        "type" => "Axis",
+        "position" => [1, 1],
+        "plots" => [
+            Dict(
+                "type" => "linesegments",
+                "args" => [[1, 2, 4 => 1], [1, 2, 4 => 2]]
+            )
+        ]
+    )
+]
 
-img = map(x-> RGBf.(x...), data)
-volume(img, colormap=nothing, color=nothing)
-heatmap(norm.(data[:, :, 5]))
-begin
-    f = Figure()
-    uv = Vec2f.(velocity_u_1[], velocity_v_1[])
-    s = Slider(f[2, 1], range=1:size(uv, 3))
-    swidth = Slider(f[3, 1], range=1:10)
-    uv_mat = map(s.value, swidth.value) do idx, w
-        vec(uv[1:w:end, 1:w:end, idx])
-    end
-    uv_vec = map(vec, uv_mat)
-    color = map(x-> norm.(x), uv_vec)
-    points = map(uv_mat) do uv
-        x = LinRange(1, 100, size(uv, 1)); y = LinRange(1, 100, size(uv, 2))
-        vec(Point2f.(x, y'))
-    end
-    arrows(f[1, 1], points, uv_vec, color=color)
-    f
-end
+u = velocity_u_1[]
+v = velocity_v_1[]
+data = [arr[i, j, t] for i in 1:size(u, 1), j in 1:size(u, 2), t in 1:size(u, 3), arr in (u, v)]
 
-begin
-    f = Figure()
-    uv = Vec3f.(velocity_u_1[], velocity_v_1[], velocity_w_1[])
-    s = Slider(f[2, 1], range=1:size(uv, 3))
-    swidth = Slider(f[3, 1], range=1:10)
-    uv_mat = map(s.value, swidth.value) do idx, w
-        vec(uv[1:w:end, 1:w:end, idx])
-    end
-    uv_vec = map(vec, uv_mat)
-    color = map(x -> norm.(x), uv_vec)
-    points = map(uv_mat) do uv
-        x = LinRange(1, 100, size(uv, 1))
-        y = LinRange(1, 100, size(uv, 2))
-        z = LinRange(1, 100, size(uv, 3))
-        vec(uv)
-    end
-    arrows(f[1, 1], points, uv_vec, color=color)
-    f
-end
+f = NDViewer.plot_data(data, layout)

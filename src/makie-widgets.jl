@@ -1,15 +1,15 @@
 
 function play_slider(figure, label, range)
     l = Label(figure[1, 1], label, halign=:left)
-    button = Button(figure[1, 2]; label=">")
-    slider = Slider(figure[1, 3]; range=range)
-    vl = Label(figure[1, 4], map(string, slider.value), halign=:right)
+    button = Makie.Button(figure[1, 2]; label=">")
+    slider = Makie.Slider(figure[1, 3]; range=range)
+    vl = Makie.Label(figure[1, 4], map(string, slider.value), halign=:right)
     sgrid = figure[1, 5] = GridLayout()
     speed_button = [
-        Button(sgrid[1, 1]; label="1") => 1,
-        Button(sgrid[1, 2]; label="10") => 10,
-        Button(sgrid[1, 3]; label="24") => 24,
-        Button(sgrid[1, 4]; label="60") => 60,
+        Makie.Button(sgrid[1, 1]; label="1") => 1,
+        Makie.Button(sgrid[1, 2]; label="10") => 10,
+        Makie.Button(sgrid[1, 3]; label="24") => 24,
+        Makie.Button(sgrid[1, 4]; label="60") => 60,
     ]
     playing = Threads.Atomic{Bool}(false)
     fps = Threads.Atomic{Int}(24)
@@ -88,4 +88,12 @@ function colormap_widget(f, limits, colormaps=COLORMAPS)
     )
     colormap_widget(f, limits[], kw.colorrange, kw.lowclip, kw.highclip, kw.nan_color, kw.alpha, kw.colormap, colormaps)
     return kw
+end
+
+
+function widget(f, ps::PlaySlider)
+    obs = play_slider(f, ps.name, ps.range)
+    on(obs) do v
+        ps.value[] = v
+    end
 end
