@@ -20,19 +20,7 @@ YAXArrays = "c21b50f5-aa40-41ea-b809-c0f5e47bfa5c"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
 [compat]
-Bonito = "3"
-DimensionalData = "0.25, 0.26"
-DiskArrays = "0.3, 0.4"
-HDF5 = "0.17"
-Makie = "0.20"
-MapTiles = "1"
-NetCDF = "0.11, 0.12"
-Observables = "0.5"
-Tyler = "0.1"
-YAML = "0.4"
-YAXArrays = "0.5"
-Zarr = "0.9"
-julia = "1"
+
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

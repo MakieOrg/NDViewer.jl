@@ -149,7 +149,13 @@ end
 
 function layer_to_plot!(ax::Makie.AbstractAxis, sliced_arrays, dict, fcolor, cmaps)
     plotfunc = resolve_symbol(dict["type"])
-    args = replace_slices(sliced_arrays, dict["args"])
+    args = map(replace_slices(sliced_arrays, dict["args"])) do vals
+        if vals isa Observable && to_value(vals) isa AbstractArray
+            return lift(Array, vals)
+        else
+            return vals
+        end
+    end
     attr = get(dict, "attributes", Dict())
     attributes = replace_slices(sliced_arrays, attr)
     if (plotfunc in (heatmap, image, surface, volume)) || dict["type"] == "sphereplot"

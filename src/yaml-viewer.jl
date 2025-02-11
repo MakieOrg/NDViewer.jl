@@ -48,18 +48,15 @@ end
 function create_app_from_yaml(yaml_str)
     return App() do
         viewer = NDViewer.load_from_yaml(yaml_str)
-        editor = CodeEditor("yaml"; initial_source=yaml_str, width=300, height=600, foldStyle="manual")
+        editor = CodeEditor("yaml"; initial_source=yaml_str, width=300, height=600, readOnly=true, foldStyle="manual")
         css = DOM.style("""
         .ace_scrollbar-v,
         .ace_scrollbar-h {
             display: none !important;
         }
         """)
-        set_editor = js"""
-            const editor = ace.edit($(editor.element))
-            editor.setReadOnly(true);
-        """
-        yaml_display = DOM.div(css, Card(editor; width="fit-content"), set_editor)
+
+        yaml_display = DOM.div(css, Card(editor; width="fit-content"))
         app_dom = Grid(
             yaml_display, viewer;
             justify_content="center",
