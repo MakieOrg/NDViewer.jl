@@ -6,14 +6,8 @@ function PlayButton(slider, range, session)
     playing = Threads.Atomic{Bool}(false)
     time_per_frame = Threads.Atomic{Float64}(1 / 30)
     task = @async let i = first(range)
-        while true
+        while !Bonito.isclosed(session)
             yield()
-            if isopen(session)
-                not_yet_open = false
-            end
-            if !isopen(session) && !not_yet_open
-                break
-            end
             t = time()
             if playing[]
                 i = mod1(i + 1, last(range))
@@ -24,7 +18,6 @@ function PlayButton(slider, range, session)
             elapsed = time() - t
             sleep(max(0.001, time_per_frame[] - elapsed))
         end
-        println("done: ", not_yet_open, ", ", isopen(session))
     end
     Base.errormonitor(task)
     on(session, button.value) do _
