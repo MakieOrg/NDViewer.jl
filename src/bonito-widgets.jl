@@ -2,18 +2,11 @@ using Bonito
 
 function PlayButton(slider, range, session)
     button = Bonito.Button("▶"; style=Styles("min-width" => "1rem", "height" => "2rem", "margin" => "0px"))
-    not_yet_open = true
     playing = Threads.Atomic{Bool}(false)
     time_per_frame = Threads.Atomic{Float64}(1 / 30)
     task = @async let i = first(range)
-        while true
+        while !Bonito.isclosed(session)
             yield()
-            if isopen(session)
-                not_yet_open = false
-            end
-            if !isopen(session) && !not_yet_open
-                break
-            end
             t = time()
             if playing[]
                 i = mod1(i + 1, last(range))
@@ -22,9 +15,8 @@ function PlayButton(slider, range, session)
                 yield()
             end
             elapsed = time() - t
-            sleep(max(0.001, time_per_frame[] - elapsed))
+            sleep(max(0.01, time_per_frame[] - elapsed))
         end
-        println("done: ", not_yet_open, ", ", isopen(session))
     end
     Base.errormonitor(task)
     on(session, button.value) do _
@@ -68,7 +60,6 @@ function Bonito.jsrender(session::Session, so::SelectOptions)
         return
     end
     label = Centered(Bonito.Label(so.name))
-    widget_row = Bonito.Row(label, dropdown;
-        columns="4rem 1fr", align_items=:center)
+    widget_row = Bonito.Row(label, dropdown; columns="4rem 1fr", align_items=:center)
     return Bonito.jsrender(session, Card(widget_row))
 end

@@ -1,7 +1,7 @@
 using Bonito, WGLMakie, NDViewer, GeometryBasics
 using NDViewer: yaml_viewer
 yaml_path(name) = joinpath(@__DIR__, name)
-WGLMakie.activate!()
+
 app1 = yaml_viewer(yaml_path("speedyweather.yaml"))
 app2 = yaml_viewer(yaml_path("speedy-volume.yaml"))
 app3 = yaml_viewer(yaml_path("speedyweather-tyler.yaml"))

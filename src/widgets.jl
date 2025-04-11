@@ -37,7 +37,7 @@ function slice_dim(arr, dim::Int, dim_name::String)
     arr_obs = convert(Observable, arr)
     axes = get_axis(arr_obs[], dim)
     widget = select_dim_widget(dim_name, axes)
-    data = map(arr_obs, Makie.map_latest(identity, widget.value;)) do arr, idx
+    data = map(arr_obs, Makie.map_latest(identity, widget.value; throttle=1/30)) do arr, idx
         return view(arr, ntuple(i -> i == dim ? idx : (:), ndims(arr))...)
     end
     return data, widget
