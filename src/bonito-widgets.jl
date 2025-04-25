@@ -1,5 +1,6 @@
 using Bonito
 
+
 function PlayButton(slider, range, session)
     button = Bonito.Button("▶"; style=Styles("min-width" => "1rem", "height" => "2rem", "margin" => "0px"))
     playing = Threads.Atomic{Bool}(false)

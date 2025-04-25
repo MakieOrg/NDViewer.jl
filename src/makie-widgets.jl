@@ -23,7 +23,7 @@ function play_slider(figure, label, range)
     rowgap!(sgrid, 2)
     scene = Makie.parent_scene(figure)
     Base.errormonitor(@async let i = first(range)
-        while !Makie.closed(scene)
+        while !Makie.isclosed(scene)
             t = time()
             if playing[]
                 i = mod1(i + 1, last(range))
