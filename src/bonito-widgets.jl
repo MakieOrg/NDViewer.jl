@@ -36,7 +36,7 @@ format_value(v) = string(v)
 format_value(v::AbstractFloat) = round(v; digits=3)
 
 function Bonito.jsrender(session::Session, ps::PlaySlider)
-    slider = Bonito.StylableSlider(ps.range)
+    slider = Bonito.StylableSlider(ps.range, slider_height=25)
     button = PlayButton(slider, ps.range, session)
     on(session, slider.value) do v
         ps.value[] = v

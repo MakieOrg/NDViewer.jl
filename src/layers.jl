@@ -298,8 +298,8 @@ function Bonito.jsrender(session::Session, viewer::DataViewerApp)
     data = viewer.data
     widgets = viewer.widgets
     names = get_dim_names(to_value(data))
-    dom = Col(Bonito.Col([widgets[n] for n in names if haskey(widgets, n)]...), Card(f); style=Styles("width" => "1000px"))
-    return Bonito.jsrender(session, Centered(dom; style=Styles("width" => "100%")))
+    dom = Col([widgets[n] for n in names if haskey(widgets, n)]..., Card(f))
+    return Bonito.jsrender(session, dom)
 end
 
 function wgl_create_plot(data, layers)
