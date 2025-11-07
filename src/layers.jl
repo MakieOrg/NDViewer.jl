@@ -172,7 +172,7 @@ function layer_to_plot!(ax::Makie.AbstractAxis, sliced_arrays, dict, fcolor, cma
             end
         end
     end
-    Makie.MakieCore._create_plot!(plotfunc, attributes, ax, args...)
+    Makie._create_plot!(plotfunc, attributes, ax, args...)
 end
 
 using Tyler, MapTiles
