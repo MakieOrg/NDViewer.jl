@@ -24,7 +24,7 @@ function load_data(data_path::String)
     end
 end
 
-function load_from_yaml(yaml_str)
+function load_from_yaml(file, yaml_str)
     data = YAML.load(yaml_str)
     if !haskey(data, "data")
         error("YAML needs to have a \"data\" key")
@@ -34,6 +34,9 @@ function load_from_yaml(yaml_str)
     end
 
     data_path = data["data"]["path"]
+    if !isfile(data_path) && startswith(data_path, "./")
+        data_path = joinpath(dirname(file), data_path[3:end])
+    end
     data_cube = load_data(data_path)
     layers = data["layers"]
     wgl_create_plot(data_cube, layers)
@@ -42,12 +45,12 @@ end
 
 function yaml_viewer(file)
     yaml_str = read(file, String)
-    create_app_from_yaml(yaml_str)
+    create_app_from_yaml(file, yaml_str)
 end
 
-function create_app_from_yaml(yaml_str)
+function create_app_from_yaml(file, yaml_str)
     return App() do
-        viewer = NDViewer.load_from_yaml(yaml_str)
+        viewer = NDViewer.load_from_yaml(file, yaml_str)
         editor = CodeEditor("yaml"; initial_source=yaml_str, width=300, height=600, readOnly=true, foldStyle="manual")
         css = DOM.style("""
         .ace_scrollbar-v,
