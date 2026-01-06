@@ -196,10 +196,69 @@ function resolve_symbol(s::String)
     end
 end
 
+"""
+    create_autolimits_toggle!(figpos, ax, data_observables; initial=true)
+
+Create a small toggle button overlaid on the axis that controls autolimits behavior.
+When enabled (default), calls `autolimits!(ax)` whenever any data observable updates.
+The button appears in the top-right corner of the axis.
+"""
+function create_autolimits_toggle!(figpos, ax, data_observables; initial::Bool=true)
+    autolimits_enabled = Observable(initial)
+
+    # Button styling - clear visual difference between on/off states
+    # ON: blue background, white text
+    # OFF: light gray background, dark gray text
+    buttoncolor = lift(autolimits_enabled) do enabled
+        enabled ? RGBAf(0.2, 0.55, 0.85, 1.0) : RGBAf(0.85, 0.85, 0.85, 1.0)
+    end
+    labelcolor = lift(autolimits_enabled) do enabled
+        enabled ? RGBAf(1, 1, 1, 1) : RGBAf(0.4, 0.4, 0.4, 1.0)
+    end
+
+    # Create button in a Box overlay at top-right with margin using alignmode
+    btn = Makie.Button(figpos;
+        label="Auto",
+        buttoncolor=buttoncolor,
+        buttoncolor_hover=lift(e -> e ? RGBAf(0.3, 0.65, 0.95, 1.0) : RGBAf(0.75, 0.75, 0.75, 1.0), autolimits_enabled),
+        buttoncolor_active=lift(e -> e ? RGBAf(0.15, 0.45, 0.75, 1.0) : RGBAf(0.65, 0.65, 0.65, 1.0), autolimits_enabled),
+        labelcolor=labelcolor,
+        fontsize=10,
+        cornerradius=3,
+        padding=(4, 4, 2, 2),
+        halign=:right,
+        valign=:top,
+        tellwidth=false,
+        tellheight=false,
+        alignmode=Mixed(right=5, top=5),
+    )
+
+    # Toggle on click
+    on(btn.clicks) do _
+        autolimits_enabled[] = !autolimits_enabled[]
+        if autolimits_enabled[]
+            autolimits!(ax)
+        end
+    end
+
+    # Call autolimits when data changes (if enabled)
+    for obs in data_observables
+        on(obs) do _
+            if autolimits_enabled[]
+                autolimits!(ax)
+            end
+        end
+    end
+
+    return autolimits_enabled, btn
+end
+
 function layer_to_axis!(fig, sliced_arrays, dict, fcolor, cmaps)
     AxType = resolve_symbol(dict["type"])
     ax_attr = [Symbol(k) => resolve_symbol(v) for (k, v) in get(dict, "attributes", [])]
     pos = get(dict, "position", [1, 1])
+    # Get autolimits config from YAML, default to true
+    autolimits_initial = get(dict, "autolimits", true)
 
     if AxType == "Tyler"
         ax = Axis(fig[pos...])
@@ -218,13 +277,51 @@ function layer_to_axis!(fig, sliced_arrays, dict, fcolor, cmaps)
             attr["transformation"] = trans
             layer_to_plot!(ax, sliced_arrays, plot, fcolor, cmaps)
         end
+        # Tyler maps handle their own limits, no autolimits toggle
+        return (ax, plots, nothing)
     else
-        ax = AxType(fig[pos...]; ax_attr...)
+        # For regular Axis with autolimits, use :max_auto tick spacing to prevent jitter
+        if AxType == Axis && autolimits_initial
+            ax = AxType(fig[pos...]; xticklabelspace=:max_auto, yticklabelspace=:max_auto, ax_attr...)
+        else
+            ax = AxType(fig[pos...]; ax_attr...)
+        end
         plots = map(dict["plots"]) do plot
             layer_to_plot!(ax, sliced_arrays, plot, fcolor, cmaps)
         end
-        return (ax, plots)
+
+        # Collect data observables from sliced_arrays that this axis uses
+        data_obs = collect_data_observables(sliced_arrays, dict)
+
+        # Create autolimits toggle button overlaid on axis
+        autolimits_toggle = nothing
+        if ax isa Axis && !isempty(data_obs)
+            autolimits_toggle, _ = create_autolimits_toggle!(fig[pos...], ax, data_obs; initial=autolimits_initial)
+        end
+
+        return (ax, plots, autolimits_toggle)
     end
+end
+
+"""
+Collect Observable data arrays used by the plots in this axis definition.
+The sliced_arrays dict has keys like [1, 2] (dimension indices) mapping to Observables.
+Plot args in the YAML reference these as [[1, 2]] etc.
+"""
+function collect_data_observables(sliced_arrays, axis_dict)
+    observables = Observable[]
+    for plot in get(axis_dict, "plots", [])
+        for arg in get(plot, "args", [])
+            # arg is like [1, 2] which is used as a key in sliced_arrays
+            if arg isa Vector && haskey(sliced_arrays, arg)
+                obs = sliced_arrays[arg]
+                if obs isa Observable
+                    push!(observables, obs)
+                end
+            end
+        end
+    end
+    return unique(observables)
 end
 
 function remove_dicts!(f, dicts)
@@ -253,7 +350,8 @@ function create_plot(data, layers; figure=(;))
     else
         f_kw = figure
     end
-    f = Figure(; f_kw...)
+    # Use smaller figure padding and no row gaps to reduce whitespace
+    f = Figure(; figure_padding=(5, 5, 5, 5), rowgap=0, f_kw...)
     fplots = f[1, 1]
     fcbar = f[2, 1]
     fcolor = f[3, 1]
@@ -293,12 +391,56 @@ struct DataViewerApp
     axes
 end
 
+using WGLMakie
+
 function Bonito.jsrender(session::Session, viewer::DataViewerApp)
     f = viewer.figure
     data = viewer.data
     widgets = viewer.widgets
     names = get_dim_names(to_value(data))
-    dom = Col([widgets[n] for n in names if haskey(widgets, n)]..., Card(f))
+
+    # Collect widgets in order
+    widget_list = [widgets[n] for n in names if haskey(widgets, n)]
+
+    # Wrap widgets in a styled container, centered
+    widgets_container = DOM.div(
+        widget_list...;
+        class="ndviewer-widgets"
+    )
+
+    # Wrap figure with resize_to=:parent for responsive sizing
+    figure_with_resize = WGLMakie.WithConfig(f; resize_to=:parent, use_html_widgets=false)
+
+    # Figure container - fills remaining space after widgets
+    figure_container = DOM.div(
+        figure_with_resize;
+        style=Styles(
+            "flex" => "1",
+            "min-height" => "0",
+            "width" => "100%",
+        )
+    )
+
+    # Main layout: widgets on top, figure fills rest
+    dom = DOM.div(
+        NDVIEWER_STYLES,
+        DOM.div(
+            widgets_container;
+            style=Styles(
+                "display" => "flex",
+                "justify-content" => "center",
+                "padding" => "4px 0",
+            )
+        ),
+        figure_container;
+        style=Styles(
+            "display" => "flex",
+            "flex-direction" => "column",
+            "width" => "100%",
+            "height" => "100vh",
+            "overflow" => "hidden",
+        )
+    )
     return Bonito.jsrender(session, dom)
 end
 

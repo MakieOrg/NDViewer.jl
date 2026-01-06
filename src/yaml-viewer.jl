@@ -10,7 +10,6 @@ function load_data(data_path::String)
                 return convert(Array{Float32}, arr)
             end
         elseif startswith(data_path, "gs://cmip6/CMIP6")
-            # We defenitely shouldnt hardcode this for a demo :D
             g = YAXArrays.open_dataset(zopen(data_path; consolidated=true))
             data_cube = DimensionalData.modify(g.tas) do arr
                 return DiskArrays.CachedDiskArray(arr)
@@ -51,21 +50,7 @@ end
 function create_app_from_yaml(file, yaml_str)
     return App() do
         viewer = NDViewer.load_from_yaml(file, yaml_str)
-        editor = CodeEditor("yaml"; initial_source=yaml_str, width=300, height=600, readOnly=true, foldStyle="manual")
-        css = DOM.style("""
-        .ace_scrollbar-v,
-        .ace_scrollbar-h {
-            display: none !important;
-        }
-        """)
-
-        yaml_display = DOM.div(css, Card(editor; width="fit-content"))
-        app_dom = Grid(
-            yaml_display, viewer;
-            justify_content="center",
-            # align_items="center",
-            style=Styles("grid-auto-flow" => "column")
-        )
-        return Centered(app_dom; style=Styles("width" => "100%"))
+        # Just return the viewer directly - it handles its own layout
+        return viewer
     end
 end

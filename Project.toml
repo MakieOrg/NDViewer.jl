@@ -1,7 +1,7 @@
 name = "NDViewer"
 uuid = "e1a03473-7fd2-4259-81e1-ed5183eae3a5"
-authors = ["Makie contributors"]
 version = "1.0.0-DEV"
+authors = ["Makie contributors"]
 
 [deps]
 Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
@@ -15,12 +15,13 @@ NetCDF = "30363a11-5582-574a-97bb-aa9a979735b9"
 Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Tyler = "e170d443-b9d6-418a-9ee8-061e966341ef"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 YAXArrays = "c21b50f5-aa40-41ea-b809-c0f5e47bfa5c"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
 [compat]
-
+WGLMakie = "0.13"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

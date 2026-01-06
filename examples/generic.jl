@@ -1,8 +1,10 @@
-using Bonito, WGLMakie, NDViewer, GeometryBasics
+using Revise, Bonito, WGLMakie, NDViewer, GeometryBasics
 using NDViewer: yaml_viewer
-yaml_path(name) = joinpath(@__DIR__, name)
 
+
+yaml_path(name) = normpath(pathof(NDViewer), "..", "..", "examples", name)
 app1 = yaml_viewer(yaml_path("speedyweather.yaml"))
+
 app2 = yaml_viewer(yaml_path("speedy-volume.yaml"))
 app3 = yaml_viewer(yaml_path("speedyweather-tyler.yaml"))
 app4 = yaml_viewer(yaml_path("tas-gn-64gb.yaml"))

@@ -1,5 +1,5 @@
 data:
-  path: ".\\dev\\NDViewer\\examples\\speedyweather.nc"
+  path: "./speedyweather.nc"
 layers:
   - layout:
       rowsize: [0.8, 0.2]
